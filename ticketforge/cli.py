@@ -7,6 +7,8 @@ import sys
 from ticketforge.client import ApiError, TicketForgeClient
 from ticketforge.config import CONFIG_PATH, load_config, save_config
 
+STAGES = ["open", "in_progress", "review", "closed"]
+
 
 def ask(prompt, required=False):
     """Prompt until we get a value (or accept empty if not required)."""
@@ -88,6 +90,47 @@ def cmd_create(args):
     print(f"Created {ticket['ref']}: {ticket['title']}")
 
 
+def ask_stage(current):
+    while True:
+        stage = ask(f"Stage ({'/'.join(STAGES)}) [{current}]: ") or current
+        if stage in STAGES:
+            return stage
+        print(f"Stage must be one of: {', '.join(STAGES)}")
+
+
+def cmd_update(args):
+    client = get_client()
+    ticket = client.get_ticket(args.ref.upper())
+
+    if args.title is None and args.description is None and args.stage is None and args.depends_on is None:
+        # no flags given: ask for each field, Enter keeps the current value
+        print(f"Editing {ticket['ref']}. Press Enter to keep the current value.")
+        wanted = {
+            "title": ask(f"Title [{ticket['title']}]: ") or ticket["title"],
+            "description": ask(f"Description [{ticket['description'] or ''}]: ") or ticket["description"],
+            "stage": ask_stage(ticket["stage"]),
+        }
+    else:
+        if args.title is not None and not args.title.strip():
+            sys.exit("Title cannot be empty.")
+        wanted = {
+            "title": args.title and args.title.strip(),
+            "description": args.description,
+            "stage": args.stage,
+            "dependsOn": args.depends_on and [ref.upper() for ref in args.depends_on],
+        }
+
+    changes = {key: value for key, value in wanted.items() if value is not None and value != ticket.get(key)}
+    if not changes:
+        print("Nothing to change.")
+        return
+
+    client.update_ticket(ticket, **changes)
+    print(f"Updated {ticket['ref']}:")
+    for key, value in changes.items():
+        print(f"  {key}: {ticket.get(key)} -> {value}")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="ticketforge", description="Manage TicketForge tickets from the terminal.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -108,6 +151,14 @@ def main():
     create.add_argument("--description")
     create.add_argument("--depends-on", nargs="+", metavar="REF", help="refs this ticket depends on, e.g. TF-1 TF-2")
     create.set_defaults(func=cmd_create)
+
+    update = commands.add_parser("update", help="update a ticket (prompts if no flags are given)")
+    update.add_argument("ref", help="ticket ref, e.g. TF-3")
+    update.add_argument("--title")
+    update.add_argument("--description")
+    update.add_argument("--stage", choices=STAGES)
+    update.add_argument("--depends-on", nargs="+", metavar="REF")
+    update.set_defaults(func=cmd_update)
 
     args = parser.parse_args()
     try:

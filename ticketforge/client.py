@@ -47,3 +47,19 @@ class TicketForgeClient:
     def create_ticket(self, title, description=None, depends_on=None):
         body = {"title": title, "description": description, "dependsOn": depends_on}
         return self._request("POST", "/workitem/publish", json=body)["workitem"]
+
+    def update_ticket(self, ticket, **changes):
+        """Apply changes to a ticket fetched with get_ticket().
+
+        PUT replaces the whole ticket (missing fields are cleared), so we
+        send every current field back along with the changes.
+        """
+        body = {
+            "title": ticket["title"],
+            "description": ticket.get("description"),
+            "stage": ticket["stage"],
+            "dependsOn": ticket.get("dependsOn"),
+            "customFields": ticket.get("customFields") or {},
+        }
+        body.update(changes)
+        return self._request("PUT", f"/workitem/{ticket['ref']}", json=body)["workitem"]
