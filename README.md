@@ -190,5 +190,6 @@ I used an AI coding assistant (Claude, via Claude Code) during this assignment. 
 - prepare beforehand: REST, auth and pagination concepts
 - guide the API exploration in DevTools and with `curl`
 - draft the code, tests and this README
+- review the finished code with a second, independent AI agent, which found a few edge cases that I then fixed
 
 I explored the API myself in the browser, chose the CLI style and the credential storage trade-off, and reviewed and ran every step.
