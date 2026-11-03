@@ -8,6 +8,15 @@ from ticketforge.client import ApiError, TicketForgeClient
 from ticketforge.config import CONFIG_PATH, load_config, save_config
 
 
+def ask(prompt, required=False):
+    """Prompt until we get a value (or accept empty if not required)."""
+    while True:
+        value = input(prompt).strip()
+        if value or not required:
+            return value
+        print("This field is required.")
+
+
 def get_client():
     credentials = load_config()
     if credentials is None:
@@ -53,6 +62,20 @@ def cmd_list(args):
         page = client.list_tickets(cursor=pagination["nextCursor"])
 
 
+def cmd_create(args):
+    title, description = args.title, args.description
+    if title is None:  # no flags given: ask interactively
+        title = ask("Title: ", required=True)
+        description = ask("Description (optional): ")
+    elif not title.strip():
+        sys.exit("Title cannot be empty.")
+
+    depends_on = [ref.upper() for ref in args.depends_on] if args.depends_on else None
+    client = get_client()
+    ticket = client.create_ticket(title.strip(), description or None, depends_on)
+    print(f"Created {ticket['ref']}: {ticket['title']}")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="ticketforge", description="Manage TicketForge tickets from the terminal.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -63,6 +86,12 @@ def main():
     list_ = commands.add_parser("list", help="list your tickets, newest first")
     list_.add_argument("--all", action="store_true", help="show every page without asking")
     list_.set_defaults(func=cmd_list)
+
+    create = commands.add_parser("create", help="create a ticket (prompts if --title is missing)")
+    create.add_argument("--title")
+    create.add_argument("--description")
+    create.add_argument("--depends-on", nargs="+", metavar="REF", help="refs this ticket depends on, e.g. TF-1 TF-2")
+    create.set_defaults(func=cmd_create)
 
     args = parser.parse_args()
     try:

@@ -39,3 +39,7 @@ class TicketForgeClient:
         """Return one page: {"workitems": [...], "pagination": {...}}."""
         params = {"limit": limit, "cursor": cursor}
         return self._request("GET", "/workitems/mine", params=params)
+
+    def create_ticket(self, title, description=None, depends_on=None):
+        body = {"title": title, "description": description, "dependsOn": depends_on}
+        return self._request("POST", "/workitem/publish", json=body)["workitem"]
