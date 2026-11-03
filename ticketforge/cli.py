@@ -216,6 +216,9 @@ def cmd_fields_list(args):
         print("No custom fields yet.")
     for field in fields:
         print(f"{field['name']:<16} {field['label']}")
+    if args.action is None:  # plain `fields`: also show what can be done
+        print("
+Actions: fields add NAME LABEL | fields rename NAME LABEL | fields delete NAME")
 
 
 def cmd_fields_add(args):
@@ -279,7 +282,8 @@ def main():
     update.set_defaults(func=cmd_update)
 
     fields = commands.add_parser("fields", help="manage custom fields")
-    field_commands = fields.add_subparsers(dest="action", required=True)
+    fields.set_defaults(func=cmd_fields_list)  # `fields` alone lists them
+    field_commands = fields.add_subparsers(dest="action")
     field_commands.add_parser("list", help="list custom fields").set_defaults(func=cmd_fields_list)
     add = field_commands.add_parser("add", help="add a custom field")
     add.add_argument("name", help="letters, numbers and underscores, e.g. priority")
