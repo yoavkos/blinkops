@@ -6,7 +6,7 @@ TicketForge has no public API docs, so the API was reverse-engineered from the w
 
 ## Installation
 
-Requires Python 3.9+ (developed on 3.12).
+Requires Python 3.10+ (developed on 3.12).
 
 ```bash
 git clone https://github.com/yoavkos/blinkops.git
@@ -28,7 +28,7 @@ python -m ticketforge setup
 ```
 Username: yoav_test
 Password:
-Connected as yoav_test. Credentials saved to C:\Users\yoav_\.ticketforge.json
+Connected as yoav_test. Credentials saved to ~/.ticketforge.json
 ```
 
 The credentials are checked against the API before they are saved. Instead of the file you can use environment variables, which take precedence:
@@ -36,6 +36,11 @@ The credentials are checked against the API before they are saved. Instead of th
 ```bash
 export TICKETFORGE_USERNAME=yoav_test
 export TICKETFORGE_PASSWORD=...
+```
+
+```powershell
+$env:TICKETFORGE_USERNAME="yoav_test"
+$env:TICKETFORGE_PASSWORD="..."
 ```
 
 ## Usage
@@ -151,14 +156,22 @@ tests/
 python -m pytest
 ```
 
-The tests use mocked HTTP responses (`responses`), so they don't touch the real API. They cover:
+The tests use mocked HTTP responses (`responses`), so they don't touch the real API.
+
+Client tests cover:
 - the auth header
 - cursor encoding
 - error parsing, including non-JSON bodies
-- retry on 429 and giving up after the limit
+- retry on 429 (including a decimal `Retry-After`) and giving up after the limit
 - no retry for POST
 - network errors
 - the update sending every field
+
+CLI tests cover:
+- update with flags
+- an update with no changes sends nothing
+- create keeps the `--description` flag when it asks for the title
+- setup with a wrong password doesn't save
 
 ## Assumptions and limitations
 
@@ -167,6 +180,9 @@ The tests use mocked HTTP responses (`responses`), so they don't touch the real 
 - **Custom fields** can be managed with `fields`, but `create` and `update` don't set their values yet. Existing values are preserved on update.
 - **Times** are shown as the API returns them (UTC, ISO 8601).
 - **`list --all`** on an account with more than ~250 tickets will hit the rate limit. The client handles it by waiting, so it is slower but still works.
+- **Interactive update** can't clear the description or edit dependencies. Use the flags instead (e.g. `--description ""`, `--depends-on`).
+- **Concurrent edits:** update reads the ticket and then sends it back whole (PUT), so a change someone else makes in between is overwritten.
+- **429 on create is retried**, on the assumption that a rate-limited request was not processed.
 
 ## AI disclosure
 

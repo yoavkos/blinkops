@@ -111,3 +111,17 @@ def test_update_sends_every_field(client):
         "dependsOn": ["TF-0"],
         "customFields": {"priority": "high"},
     }
+
+
+@responses.activate
+def test_retry_after_with_decimal_seconds(client):
+    responses.get(f"{BASE}/workitems/mine", status=429, headers={"Retry-After": "1.5"}, json={})
+    responses.get(f"{BASE}/workitems/mine", json={"workitems": [], "pagination": {}})
+    assert client.list_tickets()["workitems"] == []
+
+
+@responses.activate
+def test_non_json_success_raises_api_error(client):
+    responses.get(f"{BASE}/workitems/mine", body="<html>")
+    with pytest.raises(ApiError, match="Unexpected response"):
+        client.list_tickets()

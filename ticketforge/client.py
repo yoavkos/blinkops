@@ -36,14 +36,20 @@ class TicketForgeClient:
                 raise ApiError(None, "network_error", f"Could not reach TicketForge ({type(e).__name__}).") from e
 
             if attempt < MAX_RETRIES and self._should_retry(method, response):
-                delay = int(response.headers.get("Retry-After", 2 ** attempt))
+                try:
+                    delay = float(response.headers["Retry-After"])
+                except (KeyError, ValueError):  # missing, or an HTTP date
+                    delay = 2 ** attempt
                 log.warning("TicketForge returned %s, retrying in %ss...", response.status_code, delay)
                 time.sleep(delay)
                 continue
             break
 
         if response.ok:
-            return response.json()
+            try:
+                return response.json()
+            except ValueError:
+                raise ApiError(response.status_code, "bad_response", "Unexpected response from TicketForge.") from None
 
         # Errors look like {"err": "...", "message": "...", "retryable": ...}
         try:

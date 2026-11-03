@@ -19,7 +19,10 @@ def load_config():
     """
     config = {}
     if CONFIG_PATH.exists():
-        config = json.loads(CONFIG_PATH.read_text())
+        try:
+            config = json.loads(CONFIG_PATH.read_text())
+        except ValueError:
+            config = {}  # corrupt file: treat as not configured
 
     username = os.environ.get("TICKETFORGE_USERNAME", config.get("username"))
     password = os.environ.get("TICKETFORGE_PASSWORD", config.get("password"))

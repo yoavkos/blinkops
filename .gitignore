@@ -3,3 +3,4 @@ private-notes/
 .env
 .venv/
 __pycache__/
+*.pdf

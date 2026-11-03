@@ -80,7 +80,8 @@ def cmd_create(args):
     title, description = args.title, args.description
     if title is None:  # no flags given: ask interactively
         title = ask("Title: ", required=True)
-        description = ask("Description (optional): ")
+        if description is None:
+            description = ask("Description (optional): ")
     elif not title.strip():
         sys.exit("Title cannot be empty.")
 
