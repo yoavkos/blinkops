@@ -120,7 +120,15 @@ Error: workitem TF-99999 does not exist
 - [docs/demo.txt](docs/demo.txt): a full recorded session against the live API, including error cases.
 - Screenshots from a fresh clone, installed by following this README:
 
-![Help menu](docs/screenshot-help.jpg)
+![Help menu and registering a new account](docs/screenshot-register.jpg)
+
+![Logging in](docs/screenshot-login.jpg)
+
+![Creating a ticket interactively](docs/screenshot-create.jpg)
+
+![Updating a ticket picked from a numbered list](docs/screenshot-update.jpg)
+
+![Listing tickets](docs/screenshot-list.jpg)
 
 ![Adding a custom field interactively](docs/screenshot-fields-add.jpg)
 
