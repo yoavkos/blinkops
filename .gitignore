@@ -1,0 +1,5 @@
+# Private prep notes - not for the repo
+private-notes/
+.env
+.venv/
+__pycache__/
