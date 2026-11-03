@@ -165,3 +165,5 @@ def main():
         args.func(args)
     except ApiError as e:
         sys.exit(f"Error: {e}")
+    except (KeyboardInterrupt, EOFError):
+        sys.exit("\nCancelled.")

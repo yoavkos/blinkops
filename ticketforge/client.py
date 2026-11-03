@@ -1,9 +1,15 @@
 """HTTP client for the TicketForge API. No printing or prompting here."""
 
+import logging
+import time
+
 import requests
 
 BASE_URL = "https://integrations-assignment-ticketforge.vercel.app/api/tforge"
 TIMEOUT = 10
+MAX_RETRIES = 3
+
+log = logging.getLogger(__name__)
 
 
 class ApiError(Exception):
@@ -23,7 +29,19 @@ class TicketForgeClient:
 
     def _request(self, method, path, **kwargs):
         """Send a request and return the JSON body, or raise ApiError."""
-        response = self.session.request(method, self.base_url + path, timeout=TIMEOUT, **kwargs)
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                response = self.session.request(method, self.base_url + path, timeout=TIMEOUT, **kwargs)
+            except requests.RequestException as e:
+                raise ApiError(None, "network_error", f"Could not reach TicketForge ({type(e).__name__}).") from e
+
+            if attempt < MAX_RETRIES and self._should_retry(method, response):
+                delay = int(response.headers.get("Retry-After", 2 ** attempt))
+                log.warning("TicketForge returned %s, retrying in %ss...", response.status_code, delay)
+                time.sleep(delay)
+                continue
+            break
+
         if response.ok:
             return response.json()
 
@@ -34,6 +52,14 @@ class TicketForgeClient:
             body = {}
         message = body.get("message") or f"HTTP {response.status_code}"
         raise ApiError(response.status_code, body.get("err"), message)
+
+    @staticmethod
+    def _should_retry(method, response):
+        # 429 means the request was not processed, so it is always safe to retry.
+        # Retrying a POST after a 5xx could create a duplicate ticket.
+        if response.status_code == 429:
+            return True
+        return response.status_code >= 500 and method != "POST"
 
     def list_tickets(self, limit=None, cursor=None):
         """Return one page: {"workitems": [...], "pagination": {...}}."""
