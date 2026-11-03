@@ -217,8 +217,8 @@ def cmd_fields_list(args):
     for field in fields:
         print(f"{field['name']:<16} {field['label']}")
     if args.action is None:  # plain `fields`: also show what can be done
-        print("
-Actions: fields add NAME LABEL | fields rename NAME LABEL | fields delete NAME")
+        print()
+        print("Actions: fields add NAME LABEL | fields rename NAME LABEL | fields delete NAME")
 
 
 def cmd_fields_add(args):
