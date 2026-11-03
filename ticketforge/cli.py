@@ -62,6 +62,18 @@ def cmd_list(args):
         page = client.list_tickets(cursor=pagination["nextCursor"])
 
 
+def cmd_show(args):
+    ticket = get_client().get_ticket(args.ref.upper())
+    print(f"{ticket['ref']}  {ticket['title']}")
+    print(f"  Stage:       {ticket['stage']}")
+    print(f"  Description: {ticket['description'] or '-'}")
+    print(f"  Depends on:  {', '.join(ticket.get('dependsOn') or []) or '-'}")
+    for name, value in (ticket.get("customFields") or {}).items():
+        print(f"  {name + ':':<12} {value}")
+    print(f"  Created:     {ticket['created']}")
+    print(f"  Updated:     {ticket['updated']}")
+
+
 def cmd_create(args):
     title, description = args.title, args.description
     if title is None:  # no flags given: ask interactively
@@ -86,6 +98,10 @@ def main():
     list_ = commands.add_parser("list", help="list your tickets, newest first")
     list_.add_argument("--all", action="store_true", help="show every page without asking")
     list_.set_defaults(func=cmd_list)
+
+    show = commands.add_parser("show", help="show one ticket in full")
+    show.add_argument("ref", help="ticket ref, e.g. TF-3")
+    show.set_defaults(func=cmd_show)
 
     create = commands.add_parser("create", help="create a ticket (prompts if --title is missing)")
     create.add_argument("--title")

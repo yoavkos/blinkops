@@ -40,6 +40,10 @@ class TicketForgeClient:
         params = {"limit": limit, "cursor": cursor}
         return self._request("GET", "/workitems/mine", params=params)
 
+    def get_ticket(self, ref):
+        # view=deep includes customFields and dependsOn, which the list omits
+        return self._request("GET", f"/workitem/{ref}", params={"view": "deep"})["workitem"]
+
     def create_ticket(self, title, description=None, depends_on=None):
         body = {"title": title, "description": description, "dependsOn": depends_on}
         return self._request("POST", "/workitem/publish", json=body)["workitem"]
