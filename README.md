@@ -115,7 +115,14 @@ $ python -m ticketforge show TF-99999
 Error: workitem TF-99999 does not exist
 ```
 
-A full recorded session against the live API, including error cases, is in [docs/demo.txt](docs/demo.txt).
+### Evidence that it runs
+
+- [docs/demo.txt](docs/demo.txt): a full recorded session against the live API, including error cases.
+- Screenshots from a fresh clone, installed by following this README:
+
+![Help menu](docs/screenshot-help.jpg)
+
+![Adding a custom field interactively](docs/screenshot-fields-add.jpg)
 
 ## How the API was discovered
 
