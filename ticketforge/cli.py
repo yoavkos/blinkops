@@ -57,7 +57,7 @@ def cmd_list(args):
         pagination = page["pagination"]
         if not pagination.get("hasMore"):
             break
-        if not args.all and input("-- Enter for more, q to quit: ").strip().lower() == "q":
+        if not args.all and input("-- Press Enter for more, or q to quit: ").strip().lower() == "q":
             break
         page = client.list_tickets(cursor=pagination["nextCursor"])
 
