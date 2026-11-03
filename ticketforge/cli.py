@@ -19,6 +19,10 @@ def ask(prompt, required=False):
         print("This field is required.")
 
 
+def ask_ref(args):
+    return (args.ref or ask("Ticket ref (e.g. TF-3): ", required=True)).upper()
+
+
 def get_client():
     credentials = load_config()
     if credentials is None:
@@ -81,7 +85,7 @@ def cmd_list(args):
 
 
 def cmd_show(args):
-    ticket = get_client().get_ticket(args.ref.upper())
+    ticket = get_client().get_ticket(ask_ref(args))
     print(f"{ticket['ref']}  {ticket['title']}")
     print(f"  Stage:       {ticket['stage']}")
     print(f"  Description: {ticket['description'] or '-'}")
@@ -144,7 +148,7 @@ def ask_stage(current):
 
 def cmd_update(args):
     client = get_client()
-    ticket = client.get_ticket(args.ref.upper())
+    ticket = client.get_ticket(ask_ref(args))
     ticket["customFields"] = ticket.get("customFields") or {}  # missing when the ticket has none
 
     flags = (args.title, args.description, args.stage, args.depends_on, args.field, args.remove_field)
@@ -232,7 +236,7 @@ def main():
     list_.set_defaults(func=cmd_list)
 
     show = commands.add_parser("show", help="show one ticket in full")
-    show.add_argument("ref", help="ticket ref, e.g. TF-3")
+    show.add_argument("ref", nargs="?", help="ticket ref, e.g. TF-3 (asked if missing)")
     show.set_defaults(func=cmd_show)
 
     create = commands.add_parser("create", help="create a ticket (prompts if --title is missing)")
@@ -243,7 +247,7 @@ def main():
     create.set_defaults(func=cmd_create)
 
     update = commands.add_parser("update", help="update a ticket (prompts if no flags are given)")
-    update.add_argument("ref", help="ticket ref, e.g. TF-3")
+    update.add_argument("ref", nargs="?", help="ticket ref, e.g. TF-3 (asked if missing)")
     update.add_argument("--title")
     update.add_argument("--description")
     update.add_argument("--stage", choices=STAGES)
