@@ -131,6 +131,29 @@ def cmd_update(args):
         print(f"  {key}: {ticket.get(key)} -> {value}")
 
 
+def cmd_fields_list(args):
+    fields = get_client().list_fields()
+    if not fields:
+        print("No custom fields yet.")
+    for field in fields:
+        print(f"{field['name']:<16} {field['label']}")
+
+
+def cmd_fields_add(args):
+    field = get_client().add_field(args.name, args.label)
+    print(f"Added field {field['name']} ({field['label']}).")
+
+
+def cmd_fields_delete(args):
+    # The API deletes by id, but users know fields by name.
+    client = get_client()
+    field = next((f for f in client.list_fields() if f["name"] == args.name), None)
+    if field is None:
+        sys.exit(f"No custom field named {args.name}.")
+    client.delete_field(field["id"])
+    print(f"Deleted field {args.name}.")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="ticketforge", description="Manage TicketForge tickets from the terminal.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -159,6 +182,17 @@ def main():
     update.add_argument("--stage", choices=STAGES)
     update.add_argument("--depends-on", nargs="+", metavar="REF")
     update.set_defaults(func=cmd_update)
+
+    fields = commands.add_parser("fields", help="manage custom fields")
+    field_commands = fields.add_subparsers(dest="action", required=True)
+    field_commands.add_parser("list", help="list custom fields").set_defaults(func=cmd_fields_list)
+    add = field_commands.add_parser("add", help="add a custom field")
+    add.add_argument("name", help="letters, numbers and underscores, e.g. priority")
+    add.add_argument("label", help="display label, e.g. Priority")
+    add.set_defaults(func=cmd_fields_add)
+    delete = field_commands.add_parser("delete", help="delete a custom field")
+    delete.add_argument("name")
+    delete.set_defaults(func=cmd_fields_delete)
 
     args = parser.parse_args()
     try:

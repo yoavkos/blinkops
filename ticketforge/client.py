@@ -89,3 +89,12 @@ class TicketForgeClient:
         }
         body.update(changes)
         return self._request("PUT", f"/workitem/{ticket['ref']}", json=body)["workitem"]
+
+    def list_fields(self):
+        return self._request("GET", "/custom-fields")["customFields"]
+
+    def add_field(self, name, label):
+        return self._request("POST", "/custom-fields", json={"name": name, "label": label})["customField"]
+
+    def delete_field(self, field_id):
+        self._request("DELETE", f"/custom-fields/{field_id}")
