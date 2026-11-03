@@ -218,32 +218,53 @@ def cmd_fields_list(args):
         print(f"{field['name']:<16} {field['label']}")
     if args.action is None:  # plain `fields`: also show what can be done
         print()
-        print("Actions: fields add NAME LABEL | fields rename NAME LABEL | fields delete NAME")
+        print("To manage fields run: fields add, fields rename or fields delete (each asks for what it needs).")
 
 
 def cmd_fields_add(args):
-    field = get_client().add_field(args.name, args.label)
+    name = args.name or ask("Field name (letters, numbers, _; e.g. priority): ", required=True)
+    label = args.label or ask(f"Display label [{name}]: ") or name
+    field = get_client().add_field(name, label)
     print(f"Added field {field['name']} ({field['label']}).")
 
 
 def find_field(client, name):
-    # The API changes fields by id, but users know them by name.
-    field = next((f for f in client.list_fields() if f["name"] == name), None)
-    if field is None:
-        sys.exit(f"No custom field named {name}.")
-    return field
+    """Find a field by name, or let the user pick one from a numbered list."""
+    fields = client.list_fields()
+    if not fields:
+        sys.exit("No custom fields yet. Add one with: python -m ticketforge fields add")
+    if name:
+        # The API changes fields by id, but users know them by name.
+        field = next((f for f in fields if f["name"] == name), None)
+        if field is None:
+            sys.exit(f"No custom field named {name}.")
+        return field
+
+    for number, field in enumerate(fields, 1):
+        print(f"{number:>3}. {field['name']:<16} {field['label']}")
+    while True:
+        answer = input(f"Choose a field (1-{len(fields)}): ").strip()
+        if answer.isdigit() and 1 <= int(answer) <= len(fields):
+            return fields[int(answer) - 1]
+        print(f"Please enter a number from 1 to {len(fields)}.")
 
 
 def cmd_fields_rename(args):
     client = get_client()
-    client.rename_field(find_field(client, args.name)["id"], args.label)
-    print(f"Renamed field {args.name} to {args.label}.")
+    field = find_field(client, args.name)
+    label = args.label or ask(f"New label for {field['name']} [{field['label']}]: ", required=True)
+    client.rename_field(field["id"], label)
+    print(f"Renamed field {field['name']} to {label}.")
 
 
 def cmd_fields_delete(args):
     client = get_client()
-    client.delete_field(find_field(client, args.name)["id"])
-    print(f"Deleted field {args.name}.")
+    field = find_field(client, args.name)
+    if args.name is None and ask(f"Delete field {field['name']}? [y/N]: ").lower() != "y":
+        print("Nothing deleted.")
+        return
+    client.delete_field(field["id"])
+    print(f"Deleted field {field['name']}.")
 
 
 def main():
@@ -285,16 +306,16 @@ def main():
     fields.set_defaults(func=cmd_fields_list)  # `fields` alone lists them
     field_commands = fields.add_subparsers(dest="action")
     field_commands.add_parser("list", help="list custom fields").set_defaults(func=cmd_fields_list)
-    add = field_commands.add_parser("add", help="add a custom field")
-    add.add_argument("name", help="letters, numbers and underscores, e.g. priority")
-    add.add_argument("label", help="display label, e.g. Priority")
+    add = field_commands.add_parser("add", help="add a custom field (asks if no name is given)")
+    add.add_argument("name", nargs="?", help="letters, numbers and underscores, e.g. priority")
+    add.add_argument("label", nargs="?", help="display label, e.g. Priority")
     add.set_defaults(func=cmd_fields_add)
-    rename = field_commands.add_parser("rename", help="change a custom field's label")
-    rename.add_argument("name")
-    rename.add_argument("label")
+    rename = field_commands.add_parser("rename", help="change a custom field's label (pick from a list)")
+    rename.add_argument("name", nargs="?")
+    rename.add_argument("label", nargs="?")
     rename.set_defaults(func=cmd_fields_rename)
-    delete = field_commands.add_parser("delete", help="delete a custom field")
-    delete.add_argument("name")
+    delete = field_commands.add_parser("delete", help="delete a custom field (pick from a list)")
+    delete.add_argument("name", nargs="?")
     delete.set_defaults(func=cmd_fields_delete)
 
     args = parser.parse_args()

@@ -71,7 +71,7 @@ python -m ticketforge <command> --help
 | `show [REF]` | Show one ticket in full (description, dependencies, custom fields). Without REF it lists your tickets to pick from |
 | `create [--title T] [--description D] [--depends-on REF ...] [--field NAME=VALUE ...]` | Create a ticket. Without `--title` it asks interactively, including every custom field |
 | `update [REF] [--title T] [--description D] [--stage S] [--depends-on REF ...] [--field NAME=VALUE ...] [--remove-field NAME ...]` | Update a ticket (without REF you pick it from a list). Without flags it asks for each field (Enter keeps the current value, `-` clears a custom field) |
-| `fields list` / `fields add NAME LABEL` / `fields rename NAME LABEL` / `fields delete NAME` | Manage custom field definitions (like the web app's Manage Custom Fields) |
+| `fields` / `fields add` / `fields rename` / `fields delete` | Manage custom field definitions, like the web app's Manage Custom Fields. Each asks for what it needs (rename and delete let you pick from a numbered list, delete asks to confirm). You can also pass them directly: `fields add priority Priority` |
 
 Stages: `open`, `in_progress`, `review`, `closed`.
 
@@ -191,6 +191,7 @@ CLI tests cover:
 - create sends `--field` values
 - `--remove-field` clears one custom field and keeps the others
 - show without a ref lists the tickets and picks one by number
+- fields add asks for the name and label; fields delete from the list asks before deleting
 
 ## Assumptions and limitations
 

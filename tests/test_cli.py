@@ -111,3 +111,18 @@ def test_show_without_ref_lets_user_pick_by_number(monkeypatch, capsys):
     run(monkeypatch, "show", inputs=["5", "2"])  # 5 is out of range, then pick the 2nd
     assert "Please enter a number from 1 to 2." in capsys.readouterr().out
     assert responses.calls[1].request.url.startswith(f"{BASE}/workitem/TF-1")
+
+
+@responses.activate
+def test_fields_add_asks_for_name_and_label(monkeypatch):
+    responses.post(f"{BASE}/custom-fields", json={"customField": {"id": "f1", "name": "priority", "label": "Priority"}})
+    run(monkeypatch, "fields", "add", inputs=["priority", "Priority"])
+    assert json.loads(responses.calls[0].request.body) == {"name": "priority", "label": "Priority"}
+
+
+@responses.activate
+def test_fields_delete_from_list_asks_before_deleting(monkeypatch, capsys):
+    responses.get(f"{BASE}/custom-fields", json={"customFields": [{"id": "f1", "name": "priority", "label": "Priority"}]})
+    run(monkeypatch, "fields", "delete", inputs=["1", "n"])
+    assert len(responses.calls) == 1  # listed the fields, sent no DELETE
+    assert "Nothing deleted." in capsys.readouterr().out
