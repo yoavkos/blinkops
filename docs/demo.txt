@@ -1,0 +1,119 @@
+# TicketForge CLI - recorded session (2026-11-03 UTC, live API, user yoav_test)
+
+$ python -m ticketforge --help
+usage: ticketforge [-h] {setup,list,show,create,update,fields} ...
+
+Manage TicketForge tickets from the terminal.
+
+positional arguments:
+  {setup,list,show,create,update,fields}
+    setup               connect to TicketForge and save your credentials
+    list                list your tickets, newest first
+    show                show one ticket in full
+    create              create a ticket (prompts if --title is missing)
+    update              update a ticket (prompts if no flags are given)
+    fields              manage custom fields
+
+options:
+  -h, --help            show this help message and exit
+
+$ python -m ticketforge list --all
+REF      STAGE        TITLE
+TF-726   open         Write README
+TF-725   open         Login page returns 500
+TF-723   review       Six ticket
+TF-722   open         Fifth ticket
+TF-721   review       Fourth ticket
+TF-720   closed       Third ticket
+TF-719   review       Second ticket (reviewed)
+TF-718   review       First_ticket
+
+$ python -m ticketforge create --title "Login page returns 500" --description "Happens after password reset" --depends-on TF-718
+Created TF-727: Login page returns 500
+
+$ python -m ticketforge create
+# (typed input: Write README | Install, usage and examples)
+Title: Description (optional): Created TF-728: Write README
+
+
+$ python -m ticketforge list
+# (typed input: )
+REF      STAGE        TITLE
+TF-728   open         Write README
+TF-727   open         Login page returns 500
+TF-726   open         Write README
+TF-725   open         Login page returns 500
+TF-723   review       Six ticket
+-- Press Enter for more, or q to quit: TF-722   open         Fifth ticket
+TF-721   review       Fourth ticket
+TF-720   closed       Third ticket
+TF-719   review       Second ticket (reviewed)
+TF-718   review       First_ticket
+
+
+$ python -m ticketforge show TF-725
+TF-725  Login page returns 500
+  Stage:       open
+  Description: Happens after password reset
+  Depends on:  TF-718
+  Created:     2026-11-03T15:19:53.097Z
+  Updated:     2026-11-03T15:19:53.097Z
+
+$ python -m ticketforge update TF-725 --stage in_progress
+Updated TF-725:
+  stage: open -> in_progress
+
+$ python -m ticketforge show TF-725
+TF-725  Login page returns 500
+  Stage:       in_progress
+  Description: Happens after password reset
+  Depends on:  TF-718
+  Created:     2026-11-03T15:19:53.097Z
+  Updated:     2026-11-03T15:21:27.040Z
+
+$ python -m ticketforge update TF-725
+# (typed input:  | Root cause found | banana | review)
+Editing TF-725. Press Enter to keep the current value.
+Title [Login page returns 500]: Description [Happens after password reset]: Stage (open/in_progress/review/closed) [in_progress]: Stage must be one of: open, in_progress, review, closed
+Stage (open/in_progress/review/closed) [in_progress]: Updated TF-725:
+  description: Happens after password reset -> Root cause found
+  stage: in_progress -> review
+
+
+$ python -m ticketforge update TF-725 --stage review
+Nothing to change.
+
+$ python -m ticketforge fields list
+priority         Priority
+severity         Severity
+
+$ python -m ticketforge fields add team Team
+Added field team (Team).
+
+$ python -m ticketforge fields delete team
+Deleted field team.
+
+# --- Error handling ---
+
+$ python -m ticketforge show TF-99999
+Error: workitem TF-99999 does not exist
+
+$ python -m ticketforge show TF-1
+Error: you can only view your own workitems
+
+$ python -m ticketforge create --title "Bad dependency" --depends-on TF-99999
+Error: dependency tickets do not exist: TF-99999
+
+$ python -m ticketforge update TF-725 --stage banana
+usage: ticketforge update [-h] [--title TITLE] [--description DESCRIPTION]
+                          [--stage {open,in_progress,review,closed}]
+                          [--depends-on REF [REF ...]]
+                          ref
+ticketforge update: error: argument --stage: invalid choice: 'banana' (choose from open, in_progress, review, closed)
+
+$ python -m ticketforge create --title "   "
+Title cannot be empty.
+
+$ python -m ticketforge fields add "my field" "My field"
+Error: name must contain only alphanumeric characters and underscores
+
