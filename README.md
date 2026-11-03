@@ -222,7 +222,6 @@ CLI tests cover:
 ## AI disclosure
 
 I used an AI coding assistant (Claude, via Claude Code) during this assignment. It helped me:
-- prepare beforehand: REST, auth and pagination concepts
 - guide the API exploration in DevTools and with `curl`
 - draft the code, tests and this README
 - review the finished code with a second, independent AI agent, which found a few edge cases that I then fixed
