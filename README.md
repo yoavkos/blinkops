@@ -19,19 +19,32 @@ pip install -r requirements.txt
 
 ## Setup
 
-Create an account in the web app first (Register), then:
+Log in with an existing TicketForge account (`setup` also works as an alias):
 
 ```bash
-python -m ticketforge setup
+python -m ticketforge login
 ```
 
 ```
 Username: yoav_test
 Password:
-Connected as yoav_test. Credentials saved to ~/.ticketforge.json
+Logged in as yoav_test. Credentials saved to ~/.ticketforge.json
 ```
 
-The credentials are checked against the API before they are saved. Instead of the file you can use environment variables, which take precedence:
+Or create a new account from the terminal, which also logs you in:
+
+```bash
+python -m ticketforge register
+```
+
+```
+Username: new_user
+Password:
+Repeat password:
+Registered and logged in as new_user. Credentials saved to ~/.ticketforge.json
+```
+
+The credentials are checked against the API before they are saved. The server's rules apply to registration: a username of 3+ characters that isn't taken, and a password of 6+ characters. Instead of the file you can use environment variables, which take precedence:
 
 ```bash
 export TICKETFORGE_USERNAME=yoav_test
@@ -52,7 +65,8 @@ python -m ticketforge <command> --help
 
 | Command | What it does |
 |---|---|
-| `setup` | Connect to TicketForge and save your credentials |
+| `login` (alias `setup`) | Log in and save your credentials |
+| `register` | Create a TicketForge account and log in |
 | `list [--all]` | List your tickets, newest first, 5 per page. Press Enter for the next page, or use `--all` |
 | `show REF` | Show one ticket in full (description, dependencies, custom fields) |
 | `create [--title T] [--description D] [--depends-on REF ...]` | Create a ticket. Without `--title` it asks interactively |
@@ -120,7 +134,7 @@ Base URL: `https://integrations-assignment-ticketforge.vercel.app/api/tforge`
 
 Findings that shaped the code:
 
-- **Auth is HTTP Basic on every request.** There is no login endpoint, and the web app just calls `GET /workitems/mine`. `setup` does the same to verify the credentials.
+- **Auth is HTTP Basic on every request.** There is no login endpoint, and the web app just calls `GET /workitems/mine`. `login` does the same to verify the credentials.
 - **`PUT` replaces the whole ticket.** Fields left out are cleared: sending only `{title, stage}` wiped the description. `update` therefore fetches the ticket and sends every field back with the changes, and a test guards this.
 - **Errors have one shape:** `{"err": "...", "message": "...", "retryable": ...}`. The status code alone is not reliable: an unknown ticket returns **400** with `err: not_found`, not 404. The CLI shows the server's `message`.
 - **`retryable` is not trustworthy.** A malformed JSON body returned 400 with `retryable: true`. The client retries only on 429 and 5xx.
@@ -171,7 +185,9 @@ CLI tests cover:
 - update with flags
 - an update with no changes sends nothing
 - create keeps the `--description` flag when it asks for the title
-- setup with a wrong password doesn't save
+- login with a wrong password doesn't save
+- register sends the account and saves the credentials
+- register stops when the two passwords differ
 
 ## Assumptions and limitations
 

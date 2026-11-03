@@ -22,13 +22,18 @@ def ask(prompt, required=False):
 def get_client():
     credentials = load_config()
     if credentials is None:
-        sys.exit("Not configured yet. Run: python -m ticketforge setup")
+        sys.exit("Not logged in. Run: python -m ticketforge login (or register)")
     return TicketForgeClient(*credentials)
 
 
-def cmd_setup(args):
-    username = input("Username: ").strip()
+def ask_credentials():
+    username = ask("Username: ", required=True)
     password = getpass.getpass("Password: ")
+    return username, password
+
+
+def cmd_login(args):
+    username, password = ask_credentials()
 
     # There is no login endpoint, so check the credentials with a real request.
     client = TicketForgeClient(username, password)
@@ -40,7 +45,18 @@ def cmd_setup(args):
         raise
 
     save_config(username, password)
-    print(f"Connected as {username}. Credentials saved to {CONFIG_PATH}")
+    print(f"Logged in as {username}. Credentials saved to {CONFIG_PATH}")
+
+
+def cmd_register(args):
+    username, password = ask_credentials()
+    if getpass.getpass("Repeat password: ") != password:
+        sys.exit("Passwords do not match.")
+
+    # The server checks the rules (username 3+ chars, password 6+, not taken).
+    TicketForgeClient(username, password).register(username, password)
+    save_config(username, password)
+    print(f"Registered and logged in as {username}. Credentials saved to {CONFIG_PATH}")
 
 
 def cmd_list(args):
@@ -159,8 +175,11 @@ def main():
     parser = argparse.ArgumentParser(prog="ticketforge", description="Manage TicketForge tickets from the terminal.")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    setup = commands.add_parser("setup", help="connect to TicketForge and save your credentials")
-    setup.set_defaults(func=cmd_setup)
+    login = commands.add_parser("login", aliases=["setup"], help="log in to TicketForge and save your credentials")
+    login.set_defaults(func=cmd_login)
+
+    register = commands.add_parser("register", help="create a TicketForge account and log in")
+    register.set_defaults(func=cmd_register)
 
     list_ = commands.add_parser("list", help="list your tickets, newest first")
     list_.add_argument("--all", action="store_true", help="show every page without asking")

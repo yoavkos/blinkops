@@ -59,10 +59,27 @@ def test_create_keeps_description_flag(monkeypatch):
 
 
 @responses.activate
-def test_setup_rejects_bad_password_without_saving(monkeypatch, tmp_path):
+def test_login_rejects_bad_password_without_saving(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "CONFIG_PATH", tmp_path / "config.json")
     monkeypatch.setattr(cli.getpass, "getpass", lambda prompt: "wrong")
     responses.get(f"{BASE}/workitems/mine", status=401, json={"err": "unauthorized", "message": "valid basic auth required"})
     with pytest.raises(SystemExit, match="Invalid username or password"):
-        run(monkeypatch, "setup", inputs=["alice"])
+        run(monkeypatch, "login", inputs=["alice"])
     assert not (tmp_path / "config.json").exists()
+
+
+@responses.activate
+def test_register_creates_account_and_saves_credentials(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "CONFIG_PATH", tmp_path / "config.json")
+    monkeypatch.setattr(cli.getpass, "getpass", lambda prompt: "secret123")
+    responses.post(f"{BASE}/user/register", json={"user": {"id": "1", "username": "alice"}})
+    run(monkeypatch, "register", inputs=["alice"])
+    assert json.loads(responses.calls[0].request.body) == {"username": "alice", "password": "secret123"}
+    assert json.loads((tmp_path / "config.json").read_text())["username"] == "alice"
+
+
+def test_register_stops_when_passwords_differ(monkeypatch):
+    passwords = iter(["secret123", "typo"])
+    monkeypatch.setattr(cli.getpass, "getpass", lambda prompt: next(passwords))
+    with pytest.raises(SystemExit, match="Passwords do not match"):
+        run(monkeypatch, "register", inputs=["alice"])

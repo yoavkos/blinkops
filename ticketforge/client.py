@@ -67,6 +67,9 @@ class TicketForgeClient:
             return True
         return response.status_code >= 500 and method != "POST"
 
+    def register(self, username, password):
+        return self._request("POST", "/user/register", json={"username": username, "password": password})["user"]
+
     def list_tickets(self, limit=None, cursor=None):
         """Return one page: {"workitems": [...], "pagination": {...}}."""
         params = {"limit": limit, "cursor": cursor}

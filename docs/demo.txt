@@ -1,13 +1,15 @@
 # TicketForge CLI - recorded session (2026-11-03 UTC, live API, user yoav_test)
 
 $ python -m ticketforge --help
-usage: ticketforge [-h] {setup,list,show,create,update,fields} ...
+usage: ticketforge [-h]
+                   {login,setup,register,list,show,create,update,fields} ...
 
 Manage TicketForge tickets from the terminal.
 
 positional arguments:
-  {setup,list,show,create,update,fields}
-    setup               connect to TicketForge and save your credentials
+  {login,setup,register,list,show,create,update,fields}
+    login (setup)       log in to TicketForge and save your credentials
+    register            create a TicketForge account and log in
     list                list your tickets, newest first
     show                show one ticket in full
     create              create a ticket (prompts if --title is missing)
