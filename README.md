@@ -68,9 +68,9 @@ python -m ticketforge <command> --help
 | `login` (alias `setup`) | Log in and save your credentials |
 | `register` | Create a TicketForge account and log in |
 | `list [--all]` | List your tickets, newest first, 5 per page. Press Enter for the next page, or use `--all` |
-| `show REF` | Show one ticket in full (description, dependencies, custom fields) |
+| `show [REF]` | Show one ticket in full (description, dependencies, custom fields). Without REF it lists your tickets to pick from |
 | `create [--title T] [--description D] [--depends-on REF ...] [--field NAME=VALUE ...]` | Create a ticket. Without `--title` it asks interactively, including every custom field |
-| `update REF [--title T] [--description D] [--stage S] [--depends-on REF ...] [--field NAME=VALUE ...] [--remove-field NAME ...]` | Update a ticket. Without flags it asks for each field (Enter keeps the current value, `-` clears a custom field) |
+| `update [REF] [--title T] [--description D] [--stage S] [--depends-on REF ...] [--field NAME=VALUE ...] [--remove-field NAME ...]` | Update a ticket (without REF you pick it from a list). Without flags it asks for each field (Enter keeps the current value, `-` clears a custom field) |
 | `fields list` / `fields add NAME LABEL` / `fields rename NAME LABEL` / `fields delete NAME` | Manage custom field definitions (like the web app's Manage Custom Fields) |
 
 Stages: `open`, `in_progress`, `review`, `closed`.
@@ -190,6 +190,7 @@ CLI tests cover:
 - register stops when the two passwords differ
 - create sends `--field` values
 - `--remove-field` clears one custom field and keeps the others
+- show without a ref lists the tickets and picks one by number
 
 ## Assumptions and limitations
 

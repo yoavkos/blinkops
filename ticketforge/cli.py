@@ -19,8 +19,29 @@ def ask(prompt, required=False):
         print("This field is required.")
 
 
-def ask_ref(args):
-    return (args.ref or ask("Ticket ref (e.g. TF-3): ", required=True)).upper()
+def ask_ref(client, args):
+    """Use the ref from the command line, or let the user pick from their tickets."""
+    if args.ref:
+        return args.ref.upper()
+
+    refs, page = [], client.list_tickets()
+    while True:
+        for ticket in page["workitems"]:
+            refs.append(ticket["ref"])
+            print(f"{len(refs):>3}. {ticket['ref']:<8} {ticket['stage']:<12} {ticket['title']}")
+        if not refs:
+            sys.exit("No tickets yet. Create one with: python -m ticketforge create")
+
+        has_more = page["pagination"].get("hasMore")
+        prompt = f"Choose a ticket (1-{len(refs)}" + (", or Enter for more" if has_more else "") + "): "
+        while True:
+            answer = input(prompt).strip()
+            if answer.isdigit() and 1 <= int(answer) <= len(refs):
+                return refs[int(answer) - 1]
+            if not answer and has_more:
+                break
+            print(f"Please enter a number from 1 to {len(refs)}.")
+        page = client.list_tickets(cursor=page["pagination"]["nextCursor"])
 
 
 def get_client():
@@ -85,7 +106,8 @@ def cmd_list(args):
 
 
 def cmd_show(args):
-    ticket = get_client().get_ticket(ask_ref(args))
+    client = get_client()
+    ticket = client.get_ticket(ask_ref(client, args))
     print(f"{ticket['ref']}  {ticket['title']}")
     print(f"  Stage:       {ticket['stage']}")
     print(f"  Description: {ticket['description'] or '-'}")
@@ -148,7 +170,7 @@ def ask_stage(current):
 
 def cmd_update(args):
     client = get_client()
-    ticket = client.get_ticket(ask_ref(args))
+    ticket = client.get_ticket(ask_ref(client, args))
     ticket["customFields"] = ticket.get("customFields") or {}  # missing when the ticket has none
 
     flags = (args.title, args.description, args.stage, args.depends_on, args.field, args.remove_field)

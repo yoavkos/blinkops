@@ -101,3 +101,13 @@ def test_register_stops_when_passwords_differ(monkeypatch):
     monkeypatch.setattr(cli.getpass, "getpass", lambda prompt: next(passwords))
     with pytest.raises(SystemExit, match="Passwords do not match"):
         run(monkeypatch, "register", inputs=["alice"])
+
+
+@responses.activate
+def test_show_without_ref_lets_user_pick_by_number(monkeypatch, capsys):
+    page = {"workitems": [{**TICKET, "ref": "TF-2"}, TICKET], "pagination": {"hasMore": False}}
+    responses.get(f"{BASE}/workitems/mine", json=page)
+    responses.get(f"{BASE}/workitem/TF-1", json={"workitem": TICKET})
+    run(monkeypatch, "show", inputs=["5", "2"])  # 5 is out of range, then pick the 2nd
+    assert "Please enter a number from 1 to 2." in capsys.readouterr().out
+    assert responses.calls[1].request.url.startswith(f"{BASE}/workitem/TF-1")
