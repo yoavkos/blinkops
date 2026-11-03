@@ -79,8 +79,10 @@ class TicketForgeClient:
         # view=deep includes customFields and dependsOn, which the list omits
         return self._request("GET", f"/workitem/{ref}", params={"view": "deep"})["workitem"]
 
-    def create_ticket(self, title, description=None, depends_on=None):
+    def create_ticket(self, title, description=None, depends_on=None, custom_fields=None):
         body = {"title": title, "description": description, "dependsOn": depends_on}
+        if custom_fields:
+            body["customFields"] = custom_fields  # keyed by field name, e.g. {"priority": "high"}
         return self._request("POST", "/workitem/publish", json=body)["workitem"]
 
     def update_ticket(self, ticket, **changes):
@@ -104,6 +106,10 @@ class TicketForgeClient:
 
     def add_field(self, name, label):
         return self._request("POST", "/custom-fields", json={"name": name, "label": label})["customField"]
+
+    def rename_field(self, field_id, label):
+        # Only the label can change; the name is what tickets use as the key.
+        self._request("PUT", f"/custom-fields/{field_id}", json={"label": label})
 
     def delete_field(self, field_id):
         self._request("DELETE", f"/custom-fields/{field_id}")

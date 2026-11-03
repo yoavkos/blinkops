@@ -44,16 +44,34 @@ def test_update_with_flag_sends_change(monkeypatch):
 @responses.activate
 def test_update_without_changes_sends_nothing(monkeypatch, capsys):
     responses.get(f"{BASE}/workitem/TF-1", json={"workitem": TICKET})
-    run(monkeypatch, "update", "TF-1", inputs=["", "", ""])  # Enter on every prompt
-    assert len(responses.calls) == 1  # only the GET, no PUT
+    responses.get(f"{BASE}/custom-fields", json={"customFields": [{"id": "f1", "name": "priority", "label": "Priority"}]})
+    run(monkeypatch, "update", "TF-1", inputs=["", "", "", ""])  # Enter on every prompt
+    assert len(responses.calls) == 2  # GET ticket and fields, no PUT
     assert "Nothing to change." in capsys.readouterr().out
 
 
 @responses.activate
+def test_update_remove_field_keeps_the_others(monkeypatch):
+    ticket = {**TICKET, "customFields": {"priority": "high", "severity": "low"}}
+    responses.get(f"{BASE}/workitem/TF-1", json={"workitem": ticket})
+    responses.put(f"{BASE}/workitem/TF-1", json={"workitem": ticket})
+    run(monkeypatch, "update", "TF-1", "--remove-field", "severity", "--field", "priority=low")
+    assert json.loads(responses.calls[1].request.body)["customFields"] == {"priority": "low"}
+
+
+@responses.activate
+def test_create_sends_field_flags(monkeypatch):
+    responses.post(f"{BASE}/workitem/publish", json={"workitem": TICKET})
+    run(monkeypatch, "create", "--title", "T", "--field", "priority=high", "--field", "team=core")
+    assert json.loads(responses.calls[0].request.body)["customFields"] == {"priority": "high", "team": "core"}
+
+
+@responses.activate
 def test_create_keeps_description_flag(monkeypatch):
+    responses.get(f"{BASE}/custom-fields", json={"customFields": []})
     responses.post(f"{BASE}/workitem/publish", json={"workitem": TICKET})
     run(monkeypatch, "create", "--description", "From flag", inputs=["Typed title"])
-    sent = json.loads(responses.calls[0].request.body)
+    sent = json.loads(responses.calls[1].request.body)
     assert sent["title"] == "Typed title"
     assert sent["description"] == "From flag"
 

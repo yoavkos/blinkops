@@ -69,9 +69,9 @@ python -m ticketforge <command> --help
 | `register` | Create a TicketForge account and log in |
 | `list [--all]` | List your tickets, newest first, 5 per page. Press Enter for the next page, or use `--all` |
 | `show REF` | Show one ticket in full (description, dependencies, custom fields) |
-| `create [--title T] [--description D] [--depends-on REF ...]` | Create a ticket. Without `--title` it asks interactively |
-| `update REF [--title T] [--description D] [--stage S] [--depends-on REF ...]` | Update a ticket. Without flags it asks for each field (Enter keeps the current value) |
-| `fields list` / `fields add NAME LABEL` / `fields delete NAME` | Manage custom fields |
+| `create [--title T] [--description D] [--depends-on REF ...] [--field NAME=VALUE ...]` | Create a ticket. Without `--title` it asks interactively, including every custom field |
+| `update REF [--title T] [--description D] [--stage S] [--depends-on REF ...] [--field NAME=VALUE ...] [--remove-field NAME ...]` | Update a ticket. Without flags it asks for each field (Enter keeps the current value, `-` clears a custom field) |
+| `fields list` / `fields add NAME LABEL` / `fields rename NAME LABEL` / `fields delete NAME` | Manage custom field definitions (like the web app's Manage Custom Fields) |
 
 Stages: `open`, `in_progress`, `review`, `closed`.
 
@@ -188,12 +188,14 @@ CLI tests cover:
 - login with a wrong password doesn't save
 - register sends the account and saves the credentials
 - register stops when the two passwords differ
+- create sends `--field` values
+- `--remove-field` clears one custom field and keeps the others
 
 ## Assumptions and limitations
 
 - **Credentials** are stored in plain text in `~/.ticketforge.json`, as the API needs the password on every request. Use the environment variables to avoid the file. A next step would be the OS keychain (`keyring`).
 - **Dependencies:** `update --depends-on` replaces the whole list, and there is no flag to clear dependencies.
-- **Custom fields** can be managed with `fields`, but `create` and `update` don't set their values yet. Existing values are preserved on update.
+- **Custom field values** are text, as the API only offers the `text` type. A ticket's custom fields are replaced as a whole on update, so the CLI always sends the full set.
 - **Times** are shown as the API returns them (UTC, ISO 8601).
 - **`list --all`** on an account with more than ~250 tickets will hit the rate limit. The client handles it by waiting, so it is slower but still works.
 - **Interactive update** can't clear the description or edit dependencies. Use the flags instead (e.g. `--description ""`, `--depends-on`).

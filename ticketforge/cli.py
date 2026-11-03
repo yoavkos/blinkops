@@ -92,18 +92,45 @@ def cmd_show(args):
     print(f"  Updated:     {ticket['updated']}")
 
 
+def parse_fields(pairs):
+    """Turn ["priority=high", ...] into {"priority": "high"}."""
+    fields = {}
+    for pair in pairs:
+        name, sep, value = pair.partition("=")
+        if not sep or not name:
+            sys.exit(f"Invalid --field '{pair}', expected name=value.")
+        fields[name] = value
+    return fields
+
+
+def ask_fields(client, current):
+    """Ask for every custom field. Enter keeps the current value, '-' clears it."""
+    values = dict(current)
+    for field in client.list_fields():
+        name = field["name"]
+        answer = ask(f"{field['label']} [{current.get(name, '')}]: ")
+        if answer == "-":
+            values.pop(name, None)
+        elif answer:
+            values[name] = answer
+    return values
+
+
 def cmd_create(args):
+    client = get_client()
     title, description = args.title, args.description
-    if title is None:  # no flags given: ask interactively
+    custom_fields = parse_fields(args.field or [])
+    if title is None:  # no title flag: ask interactively
         title = ask("Title: ", required=True)
         if description is None:
             description = ask("Description (optional): ")
+        if not custom_fields:
+            custom_fields = ask_fields(client, {})
     elif not title.strip():
         sys.exit("Title cannot be empty.")
 
     depends_on = [ref.upper() for ref in args.depends_on] if args.depends_on else None
-    client = get_client()
-    ticket = client.create_ticket(title.strip(), description or None, depends_on)
+    ticket = client.create_ticket(title.strip(), description or None, depends_on, custom_fields)
     print(f"Created {ticket['ref']}: {ticket['title']}")
 
 
@@ -118,23 +145,32 @@ def ask_stage(current):
 def cmd_update(args):
     client = get_client()
     ticket = client.get_ticket(args.ref.upper())
+    ticket["customFields"] = ticket.get("customFields") or {}  # missing when the ticket has none
 
-    if args.title is None and args.description is None and args.stage is None and args.depends_on is None:
+    flags = (args.title, args.description, args.stage, args.depends_on, args.field, args.remove_field)
+    if all(flag is None for flag in flags):
         # no flags given: ask for each field, Enter keeps the current value
-        print(f"Editing {ticket['ref']}. Press Enter to keep the current value.")
+        print(f"Editing {ticket['ref']}. Press Enter to keep the current value ('-' clears a custom field).")
         wanted = {
             "title": ask(f"Title [{ticket['title']}]: ") or ticket["title"],
             "description": ask(f"Description [{ticket['description'] or ''}]: ") or ticket["description"],
             "stage": ask_stage(ticket["stage"]),
+            "customFields": ask_fields(client, ticket["customFields"]),
         }
     else:
         if args.title is not None and not args.title.strip():
             sys.exit("Title cannot be empty.")
+        custom_fields = None
+        if args.field or args.remove_field:
+            custom_fields = {**ticket["customFields"], **parse_fields(args.field or [])}
+            for name in args.remove_field or []:
+                custom_fields.pop(name, None)
         wanted = {
             "title": args.title and args.title.strip(),
             "description": args.description,
             "stage": args.stage,
             "dependsOn": args.depends_on and [ref.upper() for ref in args.depends_on],
+            "customFields": custom_fields,
         }
 
     changes = {key: value for key, value in wanted.items() if value is not None and value != ticket.get(key)}
@@ -161,13 +197,23 @@ def cmd_fields_add(args):
     print(f"Added field {field['name']} ({field['label']}).")
 
 
-def cmd_fields_delete(args):
-    # The API deletes by id, but users know fields by name.
-    client = get_client()
-    field = next((f for f in client.list_fields() if f["name"] == args.name), None)
+def find_field(client, name):
+    # The API changes fields by id, but users know them by name.
+    field = next((f for f in client.list_fields() if f["name"] == name), None)
     if field is None:
-        sys.exit(f"No custom field named {args.name}.")
-    client.delete_field(field["id"])
+        sys.exit(f"No custom field named {name}.")
+    return field
+
+
+def cmd_fields_rename(args):
+    client = get_client()
+    client.rename_field(find_field(client, args.name)["id"], args.label)
+    print(f"Renamed field {args.name} to {args.label}.")
+
+
+def cmd_fields_delete(args):
+    client = get_client()
+    client.delete_field(find_field(client, args.name)["id"])
     print(f"Deleted field {args.name}.")
 
 
@@ -193,6 +239,7 @@ def main():
     create.add_argument("--title")
     create.add_argument("--description")
     create.add_argument("--depends-on", nargs="+", metavar="REF", help="refs this ticket depends on, e.g. TF-1 TF-2")
+    create.add_argument("--field", action="append", metavar="NAME=VALUE", help="set a custom field (repeatable)")
     create.set_defaults(func=cmd_create)
 
     update = commands.add_parser("update", help="update a ticket (prompts if no flags are given)")
@@ -201,6 +248,8 @@ def main():
     update.add_argument("--description")
     update.add_argument("--stage", choices=STAGES)
     update.add_argument("--depends-on", nargs="+", metavar="REF")
+    update.add_argument("--field", action="append", metavar="NAME=VALUE", help="set a custom field (repeatable)")
+    update.add_argument("--remove-field", action="append", metavar="NAME", help="clear a custom field (repeatable)")
     update.set_defaults(func=cmd_update)
 
     fields = commands.add_parser("fields", help="manage custom fields")
@@ -210,6 +259,10 @@ def main():
     add.add_argument("name", help="letters, numbers and underscores, e.g. priority")
     add.add_argument("label", help="display label, e.g. Priority")
     add.set_defaults(func=cmd_fields_add)
+    rename = field_commands.add_parser("rename", help="change a custom field's label")
+    rename.add_argument("name")
+    rename.add_argument("label")
+    rename.set_defaults(func=cmd_fields_rename)
     delete = field_commands.add_parser("delete", help="delete a custom field")
     delete.add_argument("name")
     delete.set_defaults(func=cmd_fields_delete)

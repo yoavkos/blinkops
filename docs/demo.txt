@@ -119,3 +119,45 @@ Title cannot be empty.
 $ python -m ticketforge fields add "my field" "My field"
 Error: name must contain only alphanumeric characters and underscores
 
+
+# --- Custom field values ---
+
+$ python -m ticketforge create --title Field_demo --field priority=high --field severity=low
+Created TF-732: Field_demo
+
+$ python -m ticketforge fields rename priority Priority_level
+Renamed field priority to Priority_level.
+
+$ python -m ticketforge fields list
+priority         Priority_level
+severity         Severity
+
+$ python -m ticketforge fields rename priority Priority
+Renamed field priority to Priority.
+
+$ python -m ticketforge show TF-732
+TF-732  Field_demo
+  Stage:       open
+  Description: -
+  Depends on:  -
+  priority:    high
+  severity:    low
+  Created:     2026-11-03T15:52:02.680Z
+  Updated:     2026-11-03T15:52:02.680Z
+
+$ python -m ticketforge update TF-732 --field priority=low --remove-field severity
+Updated TF-732:
+  customFields: {'priority': 'high', 'severity': 'low'} -> {'priority': 'low'}
+
+$ python -m ticketforge show TF-732
+TF-732  Field_demo
+  Stage:       open
+  Description: -
+  Depends on:  -
+  priority:    low
+  Created:     2026-11-03T15:52:02.680Z
+  Updated:     2026-11-03T15:54:19.672Z
+
+$ python -m ticketforge create --title x --field nope=1
+Error: custom field "nope" does not exist
+
